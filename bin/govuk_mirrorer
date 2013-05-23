@@ -1,3 +1,5 @@
 #!/usr/bin/env ruby
 
 require 'govuk_mirrorer'
+
+GovukMirrorer.run
