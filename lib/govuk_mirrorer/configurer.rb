@@ -13,11 +13,15 @@ module GovukMirrorer
         o.on('--site-root URL',
              "Base URL to mirror from",
              "  falls back to MIRRORER_SITE_ROOT env variable") {|root| options[:site_root] = root }
+
+        o.separator "Logging:"
         o.on('--logfile FILE', "Enable logging to a file") { |file| options[:logfile] = file }
         o.on('--loglevel LEVEL', 'DEBUG/INFO/WARN/ERROR, it defaults to INFO') do |level|
           options[:log_level] = level
         end
         o.on('-v', '--verbose', 'sets loglevel to DEBUG') { |level| options[:log_level] = 'DEBUG' }
+
+        o.separator ""
         o.on('-h', '--help') { puts o; exit }
         o.parse!(args)
       end
