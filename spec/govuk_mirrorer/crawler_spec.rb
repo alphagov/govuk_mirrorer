@@ -12,11 +12,6 @@ describe GovukMirrorer::Crawler do
 
   describe "initializing" do
 
-    it "should set the request interval to 0 if not set" do
-      m = GovukMirrorer::Crawler.new
-      m.request_interval.should == 0
-    end
-
     it "should handle all urls returned from the indexer" do
       GovukMirrorer::Indexer.any_instance.stub(:all_start_urls).and_return(%w(
         https://www.example.com/
@@ -77,9 +72,10 @@ describe GovukMirrorer::Crawler do
         https://www.example.com/2
       ))
 
-      @m = GovukMirrorer::Crawler.new
+      @m = GovukMirrorer::Crawler.new(:request_interval => 0.01)
       @m.stub(:process_govuk_page)
       @m.send(:agent).stub(:get).and_return("default")
+      @m.stub(:sleep)
     end
 
     it "should fetch each page and pass it to the handler" do
@@ -88,6 +84,15 @@ describe GovukMirrorer::Crawler do
 
       @m.send(:agent).should_receive(:get).with("https://www.example.com/2").ordered.and_return("page_2")
       @m.should_receive(:process_govuk_page).with("page_2", {}).ordered
+
+      @m.crawl
+    end
+
+    it "should sleep for the configured request_interval between requests" do
+      @m.should_receive(:process_govuk_page).ordered
+      @m.should_receive(:sleep).with(0.01).ordered # Actually on kernel, but setting the expectation here works
+      @m.should_receive(:process_govuk_page).ordered
+      @m.should_receive(:sleep).with(0.01).ordered
 
       @m.crawl
     end

@@ -5,7 +5,8 @@ module GovukMirrorer
     def self.run(args)
       require 'optparse'
       options = {
-        :site_root => ENV['MIRRORER_SITE_ROOT']
+        :site_root => ENV['MIRRORER_SITE_ROOT'],
+        :request_interval => 0.1,
       }
       OptionParser.new do |o|
         o.banner = "Usage: govuk_mirrorer [options]"
@@ -13,6 +14,9 @@ module GovukMirrorer
         o.on('--site-root URL',
              "Base URL to mirror from",
              "  falls back to MIRRORER_SITE_ROOT env variable") {|root| options[:site_root] = root }
+        o.on('--request-interval INTERVAL', Float,
+             "Specify the delay between requests in seconds",
+             "  defaults to 0.1") {|interval| options[:request_interval] = interval }
 
         o.separator "Logging:"
         o.on('--logfile FILE', "Enable logging to a file") { |file| options[:log_file] = file }

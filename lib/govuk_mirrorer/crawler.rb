@@ -10,7 +10,6 @@ module GovukMirrorer
     RETRY_RESP_CODES = [429, (500..599).to_a].flatten
 
     def initialize(attrs = {})
-      attrs[:request_interval] ||= 0
       super
       setup_agent
       @http_errors = {}
@@ -47,6 +46,7 @@ module GovukMirrorer
           end
           handle_error url: url, handler: handler, error: ex, data: default_data
         end
+        sleep request_interval if request_interval > 0
       end
       logger.info "Completed crawling the site"
     end

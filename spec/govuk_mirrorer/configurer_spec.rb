@@ -29,6 +29,21 @@ describe GovukMirrorer::Configurer do
     end
   end
 
+  describe "setting the request interval" do
+    before :each do
+      ENV.stub(:[]).with('MIRRORER_SITE_ROOT').and_return("sausage")
+    end
+
+    it "should allow setting the request interval" do
+      GovukMirrorer::Configurer.run(%w[--request-interval 0.6]).should include(:request_interval => 0.6)
+    end
+
+    it "should default to 0.1" do
+      GovukMirrorer::Configurer.run([]).should include(:request_interval => 0.1)
+    end
+  end
+
+
   describe "setting up logging" do
     before :each do
       ENV.stub(:[]).with('MIRRORER_SITE_ROOT').and_return("sausage")
