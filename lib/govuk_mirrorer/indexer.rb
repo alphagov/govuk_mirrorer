@@ -1,5 +1,4 @@
-require 'json'
-require 'mechanize'
+require 'gds_api/content_api'
 
 module GovukMirrorer
   class Indexer
@@ -57,13 +56,13 @@ module GovukMirrorer
 
     def process_artefacts
       artefacts.each do |artefact|
-        uri = URI.parse(artefact["web_url"])
+        uri = URI.parse(artefact.web_url)
         if WHITELIST_PATHS.include?(uri.path)
-          @all_start_urls << artefact["web_url"]
-        elsif FORMATS_TO_503.include?(artefact["format"])
-          @blacklist_paths << URI.parse(artefact["web_url"]).path
+          @all_start_urls << artefact.web_url
+        elsif FORMATS_TO_503.include?(artefact.format)
+          @blacklist_paths << uri.path
         else
-          @all_start_urls << artefact["web_url"]
+          @all_start_urls << artefact.web_url
         end
       end
     end
@@ -71,12 +70,9 @@ module GovukMirrorer
     def artefacts
       retried = false
       @artefacts ||= begin
-        m = Mechanize.new
-        # Force Mechanize to use Net::HTTP which we've monkey-patched above
-        m.agent.http.reuse_ssl_sessions = false
-        page = m.get(@api_endpoint)
-        JSON.parse(page.body)["results"]
-      rescue Mechanize::ResponseCodeError => ex
+        content_api = GdsApi::ContentApi.new("#{@root}/api", :timeout => 10)
+        content_api.artefacts.with_subsequent_pages.to_a
+      rescue GdsApi::HTTPErrorResponse, GdsApi::TimedOutException
         if ! retried
           retried = true
           sleep 1
