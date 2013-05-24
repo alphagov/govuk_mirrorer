@@ -93,10 +93,10 @@ describe GovukMirrorer::Crawler do
     end
 
     describe "handling errors" do
-      it "should call add_log_warning with the relevant details" do
+      it "should call handle_error with the relevant details" do
         error = StandardError.new("Boom")
         @m.send(:agent).should_receive(:get).with("https://www.example.com/1").and_raise(error)
-        @m.should_receive(:add_log_warning).with(:url => "https://www.example.com/1", :handler => :process_govuk_page, :error => error, :data => {})
+        @m.should_receive(:handle_error).with(:url => "https://www.example.com/1", :handler => :process_govuk_page, :error => error, :data => {})
 
         @m.crawl
       end
@@ -120,7 +120,7 @@ describe GovukMirrorer::Crawler do
               @m.send(:agent).should_receive(:get).with("https://www.example.com/1").ordered.and_raise(error)
               @m.send(:agent).should_receive(:get).with("https://www.example.com/1").ordered.and_return("page_1")
 
-              @m.should_not_receive(:add_log_warning)
+              @m.should_not_receive(:handle_error)
               @m.should_receive(:sleep).with(1) # Actually on kernel, but setting the expectation here works
               @m.should_receive(:process_govuk_page).with("page_1", {})
 
@@ -132,7 +132,7 @@ describe GovukMirrorer::Crawler do
               @m.send(:agent).should_receive(:get).with("https://www.example.com/1").twice.and_raise(error)
 
               @m.should_receive(:sleep).with(1) # Actually on kernel, but setting the expectation here works
-              @m.should_receive(:add_log_warning).with(:url => "https://www.example.com/1", :handler => :process_govuk_page, :error => error, :data => {}).once
+              @m.should_receive(:handle_error).with(:url => "https://www.example.com/1", :handler => :process_govuk_page, :error => error, :data => {}).once
 
               @m.crawl
             end

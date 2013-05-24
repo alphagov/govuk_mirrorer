@@ -45,7 +45,7 @@ module GovukMirrorer
             sleep 1
             retry
           end
-          add_log_warning url: url, handler: handler, error: ex, data: default_data
+          handle_error url: url, handler: handler, error: ex, data: default_data
         end
       end
       logger.info "Completed crawling the site"
@@ -144,10 +144,10 @@ module GovukMirrorer
       end
     end
 
-    def add_log_warning(attrs)
+    def handle_error(attrs)
       msg = "Error #{attrs[:error].inspect} for #{attrs[:url]}, data: #{attrs[:data].inspect}"
       msg << "\n#{attrs[:error].backtrace.join("\n")}" unless attrs[:error].is_a?(Mechanize::Error)
-      logger.warn msg.to_s
+      logger.warn msg
       @http_errors[attrs[:url]] = attrs[:error]
     end
 
