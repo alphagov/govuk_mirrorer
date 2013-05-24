@@ -36,7 +36,7 @@ module GovukMirrorer
       end
 
       # Error if site_root nil or blank
-      raise NoRootUrlSpecifiedError if options[:site_root].nil? or options[:site_root] =~ /\A\s*\z/
+      raise NoRootUrlSpecifiedError if options[:site_root].nil? or options[:site_root].empty?
 
       options
     end
