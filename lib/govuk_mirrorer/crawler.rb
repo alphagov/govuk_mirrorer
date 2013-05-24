@@ -1,5 +1,6 @@
 require 'spidey'
 require 'mechanize'
+require 'logger'
 require 'syslogger'
 
 module GovukMirrorer
@@ -14,19 +15,7 @@ module GovukMirrorer
       setup_agent
       @http_errors = {}
 
-      # Syslog settings
-      # programname: govuk_mirrorer
-      # options: Syslog::LOG_PID | Syslog::LOG_CONS
-      # facility: local3
-      # Syslog::LOG_PID - adds the process number to the message (just after the program name)
-      # Syslog::LOG_CONS - writes the message on the console if an error occurs when sending the message
-      @logger = Syslogger.new('govuk_mirrorer', Syslog::LOG_PID | Syslog::LOG_CONS, Syslog::LOG_LOCAL3)
-
-      if attrs[:log_level]
-        @logger.level = Logger.const_get(attrs[:log_level].upcase)
-      else
-        @logger.level = Logger::INFO
-      end
+      setup_logger(attrs)
 
       @site_root = attrs[:site_root] || DEFAULT_SITE_ROOT
 
@@ -133,7 +122,27 @@ module GovukMirrorer
       handle url, handler, data
     end
 
-    protected
+    private
+
+    def setup_logger(options)
+      if options[:syslog]
+        # Syslog settings
+        # programname: govuk_mirrorer
+        # options: Syslog::LOG_PID | Syslog::LOG_CONS
+        # facility: from options
+        # Syslog::LOG_PID - adds the process number to the message (just after the program name)
+        # Syslog::LOG_CONS - writes the message on the console if an error occurs when sending the message
+        facility = Syslog.const_get("LOG_#{options[:syslog].upcase}")
+        @logger = Syslogger.new('govuk_mirrorer', Syslog::LOG_PID | Syslog::LOG_CONS, facility)
+      else
+        @logger = Logger.new(options[:log_file] || STDOUT)
+      end
+      if options[:log_level]
+        @logger.level = Logger.const_get(options[:log_level].upcase)
+      else
+        @logger.level = Logger::INFO
+      end
+    end
 
     def add_log_warning(attrs)
       msg = "Error #{attrs[:error].inspect} for #{attrs[:url]}, data: #{attrs[:data].inspect}"
@@ -141,8 +150,6 @@ module GovukMirrorer
       logger.warn msg.to_s
       @http_errors[attrs[:url]] = attrs[:error]
     end
-
-    private
 
     # Saves to a file in ./hostname/path
     # adds .html for html files

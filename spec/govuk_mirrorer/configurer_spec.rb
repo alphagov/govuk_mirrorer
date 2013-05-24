@@ -28,4 +28,22 @@ describe GovukMirrorer::Configurer do
       GovukMirrorer::Configurer.run(%w[--site-root mash]).should include(:site_root => "mash" )
     end
   end
+
+  describe "setting up logging" do
+    before :each do
+      ENV.stub(:[]).with('MIRRORER_SITE_ROOT').and_return("sausage")
+    end
+
+    it "should allow specifying a logfile" do
+      GovukMirrorer::Configurer.run(%w[--logfile /foo/bar]).should include(:log_file => "/foo/bar")
+    end
+
+    it "should allow logging to syslog with default facility of local3" do
+      GovukMirrorer::Configurer.run(%w[--syslog]).should include(:syslog => "local3")
+    end
+
+    it "should allow logging to syslog overriding the default facility" do
+      GovukMirrorer::Configurer.run(%w[--syslog local5]).should include(:syslog => "local5")
+    end
+  end
 end

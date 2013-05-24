@@ -32,6 +32,42 @@ describe GovukMirrorer::Crawler do
         https://www.example.com/designprinciples/performanceframework
       )
     end
+
+    describe "setting up the logger" do
+      before :each do
+        GovukMirrorer::Crawler.any_instance.unstub(:logger)
+      end
+
+      it "should log to stdout by default" do
+        m = GovukMirrorer::Crawler.new
+        logdev = m.logger.instance_variable_get('@logdev')
+        logdev.dev.should == STDOUT
+      end
+
+      it "should log to a file if requested" do
+        m = GovukMirrorer::Crawler.new(:log_file => "/dev/null")
+        logdev = m.logger.instance_variable_get('@logdev')
+        logdev.filename.should == "/dev/null"
+      end
+
+      it "should log to syslog if requested" do
+        m = GovukMirrorer::Crawler.new(:syslog => "local4")
+        m.logger.should be_a(Syslogger)
+        m.logger.facility.should == Syslog::LOG_LOCAL4
+        m.logger.options.should == (Syslog::LOG_PID | Syslog::LOG_CONS)
+        m.logger.ident.should == 'govuk_mirrorer'
+      end
+
+      it "should default to log level INFO" do
+        m = GovukMirrorer::Crawler.new
+        m.logger.level.should == Logger::INFO
+      end
+
+      it "should allow overriding the log level" do
+        m = GovukMirrorer::Crawler.new(:log_level => 'warn')
+        m.logger.level.should == Logger::WARN
+      end
+    end
   end
 
   describe "crawl" do

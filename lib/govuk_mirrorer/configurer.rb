@@ -15,7 +15,12 @@ module GovukMirrorer
              "  falls back to MIRRORER_SITE_ROOT env variable") {|root| options[:site_root] = root }
 
         o.separator "Logging:"
-        o.on('--logfile FILE', "Enable logging to a file") { |file| options[:logfile] = file }
+        o.on('--logfile FILE', "Enable logging to a file") { |file| options[:log_file] = file }
+        o.on('--syslog [FACILITY]',
+             "Enable logging to syslog",
+             "  optionally override the default facility (local3)") do |facility|
+          options[:syslog] = facility || "local3"
+        end
         o.on('--loglevel LEVEL', 'DEBUG/INFO/WARN/ERROR, it defaults to INFO') do |level|
           options[:log_level] = level
         end
