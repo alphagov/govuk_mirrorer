@@ -16,11 +16,13 @@ module GovukMirrorer
       /designprinciples
       /designprinciples/styleguide
       /designprinciples/performanceframework
+      /service-manual
     ).freeze
 
     # Calendars currently register as custom-application
     WHITELIST_PATHS = %w(
       /bank-holidays
+      /gwyliau-banc
       /when-do-the-clocks-change
     ).freeze
 
