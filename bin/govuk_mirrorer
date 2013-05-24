@@ -2,4 +2,8 @@
 
 require 'govuk_mirrorer'
 
-GovukMirrorer.run
+begin
+  GovukMirrorer.run
+rescue GovukMirrorer::Configurer::NoRootUrlSpecifiedError
+  abort "No root url specified.\nEither specify the --site-root option or set the MIRRORER_SITE_ROOT env variable"
+end

@@ -12,11 +12,6 @@ describe GovukMirrorer::Crawler do
 
   describe "initializing" do
 
-    it "should set the request interval to 0 if not set" do
-      m = GovukMirrorer::Crawler.new
-      m.request_interval.should == 0
-    end
-
     it "should handle all urls returned from the indexer" do
       GovukMirrorer::Indexer.any_instance.stub(:all_start_urls).and_return(%w(
         https://www.example.com/
@@ -32,6 +27,42 @@ describe GovukMirrorer::Crawler do
         https://www.example.com/designprinciples/performanceframework
       )
     end
+
+    describe "setting up the logger" do
+      before :each do
+        GovukMirrorer::Crawler.any_instance.unstub(:logger)
+      end
+
+      it "should log to stdout by default" do
+        m = GovukMirrorer::Crawler.new
+        logdev = m.logger.instance_variable_get('@logdev')
+        logdev.dev.should == STDOUT
+      end
+
+      it "should log to a file if requested" do
+        m = GovukMirrorer::Crawler.new(:log_file => "/dev/null")
+        logdev = m.logger.instance_variable_get('@logdev')
+        logdev.filename.should == "/dev/null"
+      end
+
+      it "should log to syslog if requested" do
+        m = GovukMirrorer::Crawler.new(:syslog => "local4")
+        m.logger.should be_a(Syslogger)
+        m.logger.facility.should == Syslog::LOG_LOCAL4
+        m.logger.options.should == (Syslog::LOG_PID | Syslog::LOG_CONS)
+        m.logger.ident.should == 'govuk_mirrorer'
+      end
+
+      it "should default to log level INFO" do
+        m = GovukMirrorer::Crawler.new
+        m.logger.level.should == Logger::INFO
+      end
+
+      it "should allow overriding the log level" do
+        m = GovukMirrorer::Crawler.new(:log_level => 'warn')
+        m.logger.level.should == Logger::WARN
+      end
+    end
   end
 
   describe "crawl" do
@@ -41,9 +72,10 @@ describe GovukMirrorer::Crawler do
         https://www.example.com/2
       ))
 
-      @m = GovukMirrorer::Crawler.new
+      @m = GovukMirrorer::Crawler.new(:request_interval => 0.01)
       @m.stub(:process_govuk_page)
       @m.send(:agent).stub(:get).and_return("default")
+      @m.stub(:sleep)
     end
 
     it "should fetch each page and pass it to the handler" do
@@ -56,11 +88,20 @@ describe GovukMirrorer::Crawler do
       @m.crawl
     end
 
+    it "should sleep for the configured request_interval between requests" do
+      @m.should_receive(:process_govuk_page).ordered
+      @m.should_receive(:sleep).with(0.01).ordered # Actually on kernel, but setting the expectation here works
+      @m.should_receive(:process_govuk_page).ordered
+      @m.should_receive(:sleep).with(0.01).ordered
+
+      @m.crawl
+    end
+
     describe "handling errors" do
-      it "should call add_log_warning with the relevant details" do
+      it "should call handle_error with the relevant details" do
         error = StandardError.new("Boom")
         @m.send(:agent).should_receive(:get).with("https://www.example.com/1").and_raise(error)
-        @m.should_receive(:add_log_warning).with(:url => "https://www.example.com/1", :handler => :process_govuk_page, :error => error, :data => {})
+        @m.should_receive(:handle_error).with(:url => "https://www.example.com/1", :handler => :process_govuk_page, :error => error, :data => {})
 
         @m.crawl
       end
@@ -84,7 +125,7 @@ describe GovukMirrorer::Crawler do
               @m.send(:agent).should_receive(:get).with("https://www.example.com/1").ordered.and_raise(error)
               @m.send(:agent).should_receive(:get).with("https://www.example.com/1").ordered.and_return("page_1")
 
-              @m.should_not_receive(:add_log_warning)
+              @m.should_not_receive(:handle_error)
               @m.should_receive(:sleep).with(1) # Actually on kernel, but setting the expectation here works
               @m.should_receive(:process_govuk_page).with("page_1", {})
 
@@ -96,7 +137,7 @@ describe GovukMirrorer::Crawler do
               @m.send(:agent).should_receive(:get).with("https://www.example.com/1").twice.and_raise(error)
 
               @m.should_receive(:sleep).with(1) # Actually on kernel, but setting the expectation here works
-              @m.should_receive(:add_log_warning).with(:url => "https://www.example.com/1", :handler => :process_govuk_page, :error => error, :data => {}).once
+              @m.should_receive(:handle_error).with(:url => "https://www.example.com/1", :handler => :process_govuk_page, :error => error, :data => {}).once
 
               @m.crawl
             end
@@ -195,48 +236,48 @@ describe GovukMirrorer::Crawler do
   describe "rules for deciding if a URL should be mirrored" do
     before :each do
       @m = GovukMirrorer::Crawler.new
-      @m.stub(:spidey_handle)
+      @m.stub(:handle)
 
       @page = stub("Page", :uri => URI.parse("https://www.gov.uk/foo/bar"))
     end
 
     it "should convert relative links to full links" do
-      @m.should_receive(:spidey_handle).with("https://www.gov.uk/baz", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
+      @m.should_receive(:handle).with("https://www.gov.uk/baz", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
       @m.process_link(@page, "/baz")
 
-      @m.should_receive(:spidey_handle).with("https://www.gov.uk/foo/baz", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
+      @m.should_receive(:handle).with("https://www.gov.uk/foo/baz", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
       @m.process_link(@page, "baz")
     end
 
     it "should convert www.gov.uk http links to https" do
-      @m.should_receive(:spidey_handle).with("https://www.gov.uk/something", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
+      @m.should_receive(:handle).with("https://www.gov.uk/something", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
       @m.process_link(@page, "http://www.gov.uk/something")
     end
 
     it "should pass through https www.gov.uk links" do
-      @m.should_receive(:spidey_handle).with("https://www.gov.uk/something", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
+      @m.should_receive(:handle).with("https://www.gov.uk/something", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
       @m.process_link(@page, "https://www.gov.uk/something")
     end
 
     it "should reject any urls with query params" do
-      @m.should_not_receive(:spidey_handle).with("https://www.gov.uk/something?foo=bar&baz=foo", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
+      @m.should_not_receive(:handle).with("https://www.gov.uk/something?foo=bar&baz=foo", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
       @m.process_link(@page, "https://www.gov.uk/something?foo=bar&baz=foo")
     end
 
     it "should remove any fragments (anchors) from the link" do
-      @m.should_receive(:spidey_handle).with("https://www.gov.uk/something", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
+      @m.should_receive(:handle).with("https://www.gov.uk/something", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
       @m.process_link(@page, "https://www.gov.uk/something#foo")
     end
 
     it "should ignore non www.gov.uk links" do
-      @m.should_not_receive(:spidey_handle)
+      @m.should_not_receive(:handle)
 
       @m.process_link(@page, "https://direct.gov.uk/something")
       @m.process_link(@page, "http://transactionalservices.alphagov.co.uk/department/dfid?orderBy=nameOfService&direction=desc&format=csv")
     end
 
     it "should ignore mailto links" do
-      @m.should_not_receive(:spidey_handle)
+      @m.should_not_receive(:handle)
 
       @m.process_link(@page, "mailto:me@example.com")
       @m.process_link(@page, "mailto:someone@www.gov.uk")

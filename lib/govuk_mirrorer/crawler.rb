@@ -1,5 +1,6 @@
 require 'spidey'
 require 'mechanize'
+require 'logger'
 require 'syslogger'
 
 module GovukMirrorer
@@ -9,24 +10,11 @@ module GovukMirrorer
     RETRY_RESP_CODES = [429, (500..599).to_a].flatten
 
     def initialize(attrs = {})
-      attrs[:request_interval] ||= 0
       super
       setup_agent
       @http_errors = {}
 
-      # Syslog settings
-      # programname: govuk_mirrorer
-      # options: Syslog::LOG_PID | Syslog::LOG_CONS
-      # facility: local3
-      # Syslog::LOG_PID - adds the process number to the message (just after the program name)
-      # Syslog::LOG_CONS - writes the message on the console if an error occurs when sending the message
-      @logger = Syslogger.new('govuk_mirrorer', Syslog::LOG_PID | Syslog::LOG_CONS, Syslog::LOG_LOCAL3)
-
-      if attrs[:log_level]
-        @logger.level = Logger.const_get(attrs[:log_level].upcase)
-      else
-        @logger.level = Logger::INFO
-      end
+      setup_logger(attrs)
 
       @site_root = attrs[:site_root] || DEFAULT_SITE_ROOT
 
@@ -56,8 +44,9 @@ module GovukMirrorer
             sleep 1
             retry
           end
-          add_log_warning url: url, handler: handler, error: ex, data: default_data
+          handle_error url: url, handler: handler, error: ex, data: default_data
         end
+        sleep request_interval if request_interval > 0
       end
       logger.info "Completed crawling the site"
     end
@@ -126,23 +115,37 @@ module GovukMirrorer
         return
       end
       logger.debug "Adding url #{url} from #{data[:referrer]}"
-      spidey_handle url, handler, data
-    end
-
-    def spidey_handle (url, handler, data)
       handle url, handler, data
     end
 
-    protected
+    private
 
-    def add_log_warning(attrs)
-      msg = "Error #{attrs[:error].inspect} for #{attrs[:url]}, data: #{attrs[:data].inspect}"
-      msg << "\n#{attrs[:error].backtrace.join("\n")}" unless attrs[:error].is_a?(Mechanize::Error)
-      logger.warn msg.to_s
-      @http_errors[attrs[:url]] = attrs[:error]
+    def setup_logger(options)
+      if options[:syslog]
+        # Syslog settings
+        # programname: govuk_mirrorer
+        # options: Syslog::LOG_PID | Syslog::LOG_CONS
+        # facility: from options
+        # Syslog::LOG_PID - adds the process number to the message (just after the program name)
+        # Syslog::LOG_CONS - writes the message on the console if an error occurs when sending the message
+        facility = Syslog.const_get("LOG_#{options[:syslog].upcase}")
+        @logger = Syslogger.new('govuk_mirrorer', Syslog::LOG_PID | Syslog::LOG_CONS, facility)
+      else
+        @logger = Logger.new(options[:log_file] || STDOUT)
+      end
+      if options[:log_level]
+        @logger.level = Logger.const_get(options[:log_level].upcase)
+      else
+        @logger.level = Logger::INFO
+      end
     end
 
-    private
+    def handle_error(attrs)
+      msg = "Error #{attrs[:error].inspect} for #{attrs[:url]}, data: #{attrs[:data].inspect}"
+      msg << "\n#{attrs[:error].backtrace.join("\n")}" unless attrs[:error].is_a?(Mechanize::Error)
+      logger.warn msg
+      @http_errors[attrs[:url]] = attrs[:error]
+    end
 
     # Saves to a file in ./hostname/path
     # adds .html for html files
