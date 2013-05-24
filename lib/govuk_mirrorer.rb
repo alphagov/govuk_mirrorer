@@ -7,7 +7,7 @@ require 'govuk_mirrorer/configurer'
 
 module GovukMirrorer
   def self.run
-    crawler = Crawler.new(Configurer.run)
+    crawler = Crawler.new(Configurer.run(ARGV))
     crawler.crawl
   end
 end
