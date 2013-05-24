@@ -231,48 +231,48 @@ describe GovukMirrorer::Crawler do
   describe "rules for deciding if a URL should be mirrored" do
     before :each do
       @m = GovukMirrorer::Crawler.new
-      @m.stub(:spidey_handle)
+      @m.stub(:handle)
 
       @page = stub("Page", :uri => URI.parse("https://www.gov.uk/foo/bar"))
     end
 
     it "should convert relative links to full links" do
-      @m.should_receive(:spidey_handle).with("https://www.gov.uk/baz", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
+      @m.should_receive(:handle).with("https://www.gov.uk/baz", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
       @m.process_link(@page, "/baz")
 
-      @m.should_receive(:spidey_handle).with("https://www.gov.uk/foo/baz", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
+      @m.should_receive(:handle).with("https://www.gov.uk/foo/baz", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
       @m.process_link(@page, "baz")
     end
 
     it "should convert www.gov.uk http links to https" do
-      @m.should_receive(:spidey_handle).with("https://www.gov.uk/something", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
+      @m.should_receive(:handle).with("https://www.gov.uk/something", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
       @m.process_link(@page, "http://www.gov.uk/something")
     end
 
     it "should pass through https www.gov.uk links" do
-      @m.should_receive(:spidey_handle).with("https://www.gov.uk/something", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
+      @m.should_receive(:handle).with("https://www.gov.uk/something", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
       @m.process_link(@page, "https://www.gov.uk/something")
     end
 
     it "should reject any urls with query params" do
-      @m.should_not_receive(:spidey_handle).with("https://www.gov.uk/something?foo=bar&baz=foo", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
+      @m.should_not_receive(:handle).with("https://www.gov.uk/something?foo=bar&baz=foo", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
       @m.process_link(@page, "https://www.gov.uk/something?foo=bar&baz=foo")
     end
 
     it "should remove any fragments (anchors) from the link" do
-      @m.should_receive(:spidey_handle).with("https://www.gov.uk/something", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
+      @m.should_receive(:handle).with("https://www.gov.uk/something", :process_govuk_page, :referrer => "https://www.gov.uk/foo/bar")
       @m.process_link(@page, "https://www.gov.uk/something#foo")
     end
 
     it "should ignore non www.gov.uk links" do
-      @m.should_not_receive(:spidey_handle)
+      @m.should_not_receive(:handle)
 
       @m.process_link(@page, "https://direct.gov.uk/something")
       @m.process_link(@page, "http://transactionalservices.alphagov.co.uk/department/dfid?orderBy=nameOfService&direction=desc&format=csv")
     end
 
     it "should ignore mailto links" do
-      @m.should_not_receive(:spidey_handle)
+      @m.should_not_receive(:handle)
 
       @m.process_link(@page, "mailto:me@example.com")
       @m.process_link(@page, "mailto:someone@www.gov.uk")

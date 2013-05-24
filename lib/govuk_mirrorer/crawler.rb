@@ -115,10 +115,6 @@ module GovukMirrorer
         return
       end
       logger.debug "Adding url #{url} from #{data[:referrer]}"
-      spidey_handle url, handler, data
-    end
-
-    def spidey_handle (url, handler, data)
       handle url, handler, data
     end
 
