@@ -34,11 +34,16 @@ module GovukMirrorer
       /search
     ).freeze
 
+    BLACKLISTED_ATOM_FEEDS_USED_FOR_EMAIL_ALERTS = %w(
+      /government/announcements.atom
+      /government/publications.atom
+    ).freeze
+
     def initialize(root)
       @root = root
       @api_endpoint = @root + '/api/artefacts.json'
       @all_start_urls = ADDITIONAL_START_PATHS.map{ |x| @root + x}
-      @blacklist_paths = ADDITIONAL_BLACKLIST_PATHS.dup
+      @blacklist_paths = ADDITIONAL_BLACKLIST_PATHS.dup + BLACKLISTED_ATOM_FEEDS_USED_FOR_EMAIL_ALERTS.dup
       process_artefacts
     end
 
