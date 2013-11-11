@@ -5,7 +5,7 @@ require 'syslogger'
 
 module GovukMirrorer
   class Crawler < Spidey::AbstractSpider
-    USER_AGENT = "GOV.UK Mirrorer/0.1"
+    USER_AGENT = "GOV.UK Mirrorer/#{GovukMirrorer::VERSION}"
     DEFAULT_SITE_ROOT = 'https://www.gov.uk'
     RETRY_RESP_CODES = [429, (500..599).to_a].flatten
 
