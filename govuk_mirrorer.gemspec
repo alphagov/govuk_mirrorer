@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "spidey", "0.0.4"
   spec.add_dependency "mechanize", "2.5.1"
   spec.add_dependency "syslogger", "1.4.2"
-  spec.add_dependency "gds-api-adapters", "6.1.0"
+  spec.add_dependency "gds-api-adapters", "8.4.0"
 
   spec.add_development_dependency "bundler", "~> 1.1"
   spec.add_development_dependency "rake"
