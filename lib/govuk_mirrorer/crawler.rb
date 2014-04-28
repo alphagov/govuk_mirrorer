@@ -32,23 +32,25 @@ module GovukMirrorer
     attr_accessor :logger
 
     def crawl(options = {})
-      each_url do |url, handler, default_data|
-        retried = false
-        begin
-          page = agent.get(url)
-          logger.debug "Handling #{url.inspect}"
-          send handler, page, default_data
-        rescue => ex
-          if ex.is_a?(Mechanize::ResponseCodeError) and RETRY_RESP_CODES.include?(ex.response_code.to_i) and ! retried
-            retried = true
-            sleep 1
-            retry
+      GovukMirrorer.statsd.time("govuk.app.mirrorer.crawl_duration") do
+        each_url do |url, handler, default_data|
+          retried = false
+          begin
+            page = agent.get(url)
+            logger.debug "Handling #{url.inspect}"
+            send handler, page, default_data
+          rescue => ex
+            if ex.is_a?(Mechanize::ResponseCodeError) and RETRY_RESP_CODES.include?(ex.response_code.to_i) and ! retried
+              retried = true
+              sleep 1
+              retry
+            end
+            handle_error url: url, handler: handler, error: ex, data: default_data
           end
-          handle_error url: url, handler: handler, error: ex, data: default_data
+          sleep request_interval if request_interval > 0
         end
-        sleep request_interval if request_interval > 0
+        logger.info "Completed crawling the site"
       end
-      logger.info "Completed crawling the site"
     end
 
     def process_govuk_page(page, data = {})

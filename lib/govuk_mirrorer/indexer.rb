@@ -78,7 +78,9 @@ module GovukMirrorer
       retried = false
       @artefacts ||= begin
         content_api = GdsApi::ContentApi.new("#{@root}/api", :timeout => 10)
-        content_api.artefacts.with_subsequent_pages.to_a
+        GovukMirrorer.statsd.time("govuk.app.mirrorer.artefacts_duration") do
+          content_api.artefacts.with_subsequent_pages.to_a
+        end
       rescue GdsApi::HTTPErrorResponse, GdsApi::TimedOutException
         if ! retried
           retried = true
