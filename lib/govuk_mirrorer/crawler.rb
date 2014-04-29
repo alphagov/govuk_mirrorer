@@ -163,8 +163,6 @@ module GovukMirrorer
     def setup_agent
       agent.user_agent = USER_AGENT
       agent.request_headers["X-Govuk-Mirrorer"] = "1"
-      # Force Mechanize to use Net::HTTP which we've monkey-patched above
-      agent.agent.http.reuse_ssl_sessions = false
     end
   end
 end

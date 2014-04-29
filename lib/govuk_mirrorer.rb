@@ -1,4 +1,3 @@
-require 'govuk_mirrorer/net_http_sni_monkey_patch'
 
 require 'govuk_mirrorer/configurer'
 require 'govuk_mirrorer/crawler'
