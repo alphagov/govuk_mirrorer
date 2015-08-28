@@ -121,7 +121,7 @@ describe GovukMirrorer::Crawler do
         ].each do |resp_code, resp_reason|
           context "#{resp_code} #{resp_reason}" do
             it "should sleep for a second, and then retry" do
-              error = Mechanize::ResponseCodeError.new(stub("Page", :code => resp_code), resp_reason)
+              error = Mechanize::ResponseCodeError.new(double("Page", code: resp_code), resp_reason)
               @m.send(:agent).should_receive(:get).with("https://www.example.com/1").ordered.and_raise(error)
               @m.send(:agent).should_receive(:get).with("https://www.example.com/1").ordered.and_return("page_1")
 
@@ -133,7 +133,7 @@ describe GovukMirrorer::Crawler do
             end
 
             it "should only retry once" do
-              error = Mechanize::ResponseCodeError.new(stub("Page", :code => resp_code), resp_reason)
+              error = Mechanize::ResponseCodeError.new(double("Page", code: resp_code), resp_reason)
               @m.send(:agent).should_receive(:get).with("https://www.example.com/1").twice.and_raise(error)
 
               @m.should_receive(:sleep).with(1) # Actually on kernel, but setting the expectation here works
@@ -152,7 +152,7 @@ describe GovukMirrorer::Crawler do
       @m = GovukMirrorer::Crawler.new({:site_root => "https://site-under-test"})
       @m.stub(:save_to_disk)
       @m.stub(:extract_and_handle_links)
-      @page = stub("Page", :uri => URI.parse("https://site-under-test/something"))
+      @page = double("Page", uri: URI.parse("https://site-under-test/something"))
     end
 
     it "should save the page to disk" do
@@ -238,7 +238,7 @@ describe GovukMirrorer::Crawler do
       @m = GovukMirrorer::Crawler.new
       @m.stub(:handle)
 
-      @page = stub("Page", :uri => URI.parse("https://www.gov.uk/foo/bar"))
+      @page = double("Page", uri: URI.parse("https://www.gov.uk/foo/bar"))
     end
 
     it "should convert relative links to full links" do
