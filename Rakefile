@@ -6,8 +6,8 @@ RSpec::Core::RakeTask.new(:spec)
 task :default => :spec
 
 require "gem_publisher"
-desc "Publish gem to Gemfury"
+desc "Publish gem to RubyGems"
 task :publish_gem do |t|
-  gem = GemPublisher.publish_if_updated("govuk_mirrorer.gemspec", :gemfury, :as => "govuk")
+  gem = GemPublisher.publish_if_updated("govuk_mirrorer.gemspec", :rubygems)
   puts "Published #{gem}" if gem
 end
